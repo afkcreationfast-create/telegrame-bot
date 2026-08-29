@@ -17,7 +17,7 @@ bot.onText(/\/start/, (msg) => {
     bot.sendMessage(chatId, "Bienvenue chez **AFK Création et Marketing** 🚀\n\nSpécialistes en **Gift Cards** 🎁\n\nContact : +50938898521 | afk.creation.fast@gmail.com", { parse_mode: "Markdown" });
 });
 
-// 3. Gestion des messages avec Gemini (Modèle gemini-2.0-flash compatible et haut quota)
+// 3. Gestion des messages avec Gemini (Modèle obligatoire gemini-3.6-flash)
 bot.on('message', async (msg) => {
     const chatId = msg.chat.id;
     const texteRecu = msg.text;
@@ -36,7 +36,7 @@ bot.on('message', async (msg) => {
 
         try {
             const response = await ai.models.generateContent({
-                model: 'gemini-2.0-flash',
+                model: 'gemini-3.6-flash',
                 config: {
                     systemInstruction: systemPrompt,
                 },
@@ -48,7 +48,13 @@ bot.on('message', async (msg) => {
 
         } catch (error) {
             console.error("Erreur avec l'IA :", error);
-            bot.sendMessage(chatId, "Oui chef ! J'ai bien reçu ton message (mode secours actif).");
+            
+            // Gestion propre si le quota gratuit journalier (20 requêtes) est atteint
+            if (error.status === 429) {
+                bot.sendMessage(chatId, "Oui chef ! Quota journalier atteint pour le modèle principal, je suis en mode de secours opérationnel.");
+            } else {
+                bot.sendMessage(chatId, "Oui chef ! J'ai bien reçu ton message (mode secours actif).");
+            }
         }
     }
 });
