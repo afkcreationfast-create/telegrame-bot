@@ -1,14 +1,13 @@
 const TelegramBot = require('node-telegram-bot-api');
-const { GoogleGenerativeAI } = require('@google/generative-ai');
+const { GoogleGenAI } = require('@google/genai');
 const http = require('http');
 
 // 1. Configurations
 const telegramToken = '8618752669:AAGE01ZMLOZzV-9Gf2Lzcw1bTbvaJ4omU34';
 const bot = new TelegramBot(telegramToken, { polling: true });
 
-// Initialisation de Gemini sécurisée via l'environnement Render
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+// Initialisation de Gemini avec le SDK officiel et sécurisé via Render
+const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
 const ADMIN_USERNAME = "AFKCreation1"; 
 
@@ -36,11 +35,19 @@ bot.on('message', async (msg) => {
         }
 
         try {
-            const promptFinal = `${instructionSpecial}\n\nMessage de l'utilisateur : "${texteRecu}"`;
-            const result = await model.generateContent(promptFinal);
-            const response = await result.response;
-            const reponseAI = response.text() || "Oui chef ! À ton écoute.";
-            
+            const response = await ai.models.generateContent({
+                model: 'gemini-2.5-flash',
+                contents: [
+                    {
+                        role: 'user',
+                        parts: [
+                            { text: `${instructionSpecial}\n\nMessage de l'utilisateur : "${texteRecu}"` }
+                        ]
+                    }
+                ]
+            });
+
+            const reponseAI = response.text || "Oui chef ! À ton écoute.";
             bot.sendMessage(chatId, reponseAI);
 
         } catch (error) {
