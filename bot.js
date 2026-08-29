@@ -3,6 +3,7 @@ const { GoogleGenAI } = require('@google/genai');
 const http = require('http');
 
 const telegramToken = process.env.TELEGRAM_BOT_TOKEN;
+// Ajout de { polling: { interval: 300 } } pour éviter les conflits de requêtes
 const bot = new TelegramBot(telegramToken, { polling: true });
 
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
@@ -29,20 +30,17 @@ bot.onText(/\/pub\s+(.+)?/, async (msg, match) => {
     bot.sendMessage(chatId, "⏳ L'IA rédige un super message publicitaire détaillé...");
 
     try {
-        // Demande à Gemini de rédiger une pub longue, professionnelle et attractive
         const promptRedaction = `En tant qu'expert marketing pour "AFK Création et Marketing", rédige un message publicitaire professionnel, engageant, structuré et plus long (avec des emojis) pour notre chaîne Telegram, basé sur ces informations : "${instructionUtilisateur}". Inclus la mention du prix minimum, la validité, et nos contacts officiels (WhatsApp : +50938898521, Email : afk.creation.fast@gmail.com, Admin : @AFKCreation1).`;
 
+        // Utilisation du modèle correct exigé par l'API
         const response = await ai.models.generateContent({
-            model: 'gemini-2.5-flash',
+            model: 'gemini-3.6-flash',
             contents: [promptRedaction]
         });
 
         const texteGenere = response.text || "🚀 AFK Création et Marketing 🚀\n\n" + instructionUtilisateur;
 
-        // Envoi du texte généré par l'IA directement sur le canal
         await bot.sendMessage(CHANNEL_ID, texteGenere, { parse_mode: "Markdown" });
-        
-        // Confirmation à l'admin
         bot.sendMessage(chatId, "✅ Pub générée et publiée avec succès sur la chaîne !\n\n*Aperçu du texte envoyé :*\n\n" + texteGenere, { parse_mode: "Markdown" });
         console.log("Publicité générée par IA et postée sur le canal !");
 
@@ -72,7 +70,7 @@ bot.on('message', async (msg) => {
 
         try {
             const response = await ai.models.generateContent({
-                model: 'gemini-2.5-flash',
+                model: 'gemini-3.6-flash',
                 config: { systemInstruction: systemPrompt },
                 contents: [texteRecu]
             });
