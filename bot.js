@@ -10,36 +10,46 @@ const CHANNEL_ID = "@AFKcreation0";
 
 let messagesRecusAujourdhui = 0;
 
-// Fonction de publication publicitaire
-async function posterPublicite(chatIdCible = null) {
-    try {
-        const textePub = "🚀 **AFK Création et Marketing** 🚀\n\nBesoin de **Gift Cards** rapides et sécurisées ? 🎁\nFaites confiance à notre service professionnel !\n\n📞 Contactez-nous dès maintenant :\n• WhatsApp : +50938898521\n• Email : afk.creation.fast@gmail.com\n• Admin : @AFKCreation1";
-        
-        await bot.sendMessage(CHANNEL_ID, textePub, { parse_mode: "Markdown" });
-        
-        if (chatIdCible) {
-            bot.sendMessage(chatIdCible, "✅ Publicité publiée avec succès sur la chaîne @AFKcreation0 !");
-        }
-        console.log("Publicité postée avec succès sur le canal !");
-    } catch (error) {
-        console.error("Erreur lors de l'envoi de la pub :", error.message);
-        if (chatIdCible) {
-            bot.sendMessage(chatIdCible, "❌ Erreur Telegram : " + error.message);
-        }
-    }
-}
-
 // Commande /start
 bot.onText(/\/start/, (msg) => {
     const chatId = msg.chat.id;
-    bot.sendMessage(chatId, "Bienvenue chez **AFK Création et Marketing** 🚀\n\nEnvoyez /pub pour publier une annonce sur le canal.", { parse_mode: "Markdown" });
+    bot.sendMessage(chatId, "Bienvenue chez **AFK Création et Marketing** 🚀\n\nUtilise la commande `/pub [ton message]` pour que l'IA génère et publie une annonce pro sur la chaîne !", { parse_mode: "Markdown" });
 });
 
-// Commande /pub directe
-bot.onText(/\/pub/, (msg) => {
+// Commande /pub intelligente avec IA
+bot.onText(/\/pub\s+(.+)?/, async (msg, match) => {
     const chatId = msg.chat.id;
-    bot.sendMessage(chatId, "🚀 Ordre reçu ! Publication sur le canal en cours...");
-    posterPublicite(chatId);
+    const instructionUtilisateur = match[1]; // Récupère le texte tapé après /pub
+
+    if (!instructionUtilisateur) {
+        bot.sendMessage(chatId, "⚠️ Dis-moi quoi mettre dans la pub ! Exemple : `/pub le prix minimum des gift card est 1600gds elle est valide pour 3ans`", { parse_mode: "Markdown" });
+        return;
+    }
+
+    bot.sendMessage(chatId, "⏳ L'IA rédige un super message publicitaire détaillé...");
+
+    try {
+        // Demande à Gemini de rédiger une pub longue, professionnelle et attractive
+        const promptRedaction = `En tant qu'expert marketing pour "AFK Création et Marketing", rédige un message publicitaire professionnel, engageant, structuré et plus long (avec des emojis) pour notre chaîne Telegram, basé sur ces informations : "${instructionUtilisateur}". Inclus la mention du prix minimum, la validité, et nos contacts officiels (WhatsApp : +50938898521, Email : afk.creation.fast@gmail.com, Admin : @AFKCreation1).`;
+
+        const response = await ai.models.generateContent({
+            model: 'gemini-2.5-flash',
+            contents: [promptRedaction]
+        });
+
+        const texteGenere = response.text || "🚀 AFK Création et Marketing 🚀\n\n" + instructionUtilisateur;
+
+        // Envoi du texte généré par l'IA directement sur le canal
+        await bot.sendMessage(CHANNEL_ID, texteGenere, { parse_mode: "Markdown" });
+        
+        // Confirmation à l'admin
+        bot.sendMessage(chatId, "✅ Pub générée et publiée avec succès sur la chaîne !\n\n*Aperçu du texte envoyé :*\n\n" + texteGenere, { parse_mode: "Markdown" });
+        console.log("Publicité générée par IA et postée sur le canal !");
+
+    } catch (error) {
+        console.error("Erreur lors de la génération de la pub :", error.message);
+        bot.sendMessage(chatId, "❌ Erreur lors de la génération par l'IA : " + error.message);
+    }
 });
 
 // Commande /stats
@@ -48,7 +58,7 @@ bot.onText(/\/stats/, (msg) => {
     bot.sendMessage(chatId, `📊 **Statistiques du Bot** :\n• Messages reçus aujourd'hui : ${messagesRecusAujourdhui}`);
 });
 
-// Gestion des messages et de l'IA avec sécurité anti-plantage 503
+// Gestion des messages et de l'IA (discussion classique)
 bot.on('message', async (msg) => {
     const chatId = msg.chat.id;
     const texteRecu = msg.text;
@@ -72,8 +82,7 @@ bot.on('message', async (msg) => {
 
         } catch (error) {
             console.error("Erreur avec l'IA :", error.message);
-            // Réponse de secours si l'IA est surchargée (évite le crash du bot)
-            bot.sendMessage(chatId, "Oui chef ! J'ai bien reçu ton message (le service IA rencontre une brève surcharge, mais je suis là).");
+            bot.sendMessage(chatId, "Oui chef ! J'ai bien reçu ton message.");
         }
     }
 });
