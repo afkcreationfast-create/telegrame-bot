@@ -17,7 +17,7 @@ bot.onText(/\/start/, (msg) => {
     bot.sendMessage(chatId, "Bienvenue chez **AFK Création et Marketing** 🚀\n\nSpécialistes en **Gift Cards** 🎁\n\nContact : +50938898521 | afk.creation.fast@gmail.com", { parse_mode: "Markdown" });
 });
 
-// 3. Gestion des messages avec Gemini (Modèle gemini-1.5-flash optimisé pour un quota élevé)
+// 3. Gestion des messages avec Gemini (Modèle gemini-2.0-flash compatible et haut quota)
 bot.on('message', async (msg) => {
     const chatId = msg.chat.id;
     const texteRecu = msg.text;
@@ -36,7 +36,7 @@ bot.on('message', async (msg) => {
 
         try {
             const response = await ai.models.generateContent({
-                model: 'gemini-1.5-flash',
+                model: 'gemini-2.0-flash',
                 config: {
                     systemInstruction: systemPrompt,
                 },
