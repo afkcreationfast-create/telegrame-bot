@@ -17,7 +17,7 @@ bot.onText(/\/start/, (msg) => {
     bot.sendMessage(chatId, "Bienvenue chez **AFK Création et Marketing** 🚀\n\nSpécialistes en **Gift Cards** 🎁\n\nContact : +50938898521 | afk.creation.fast@gmail.com", { parse_mode: "Markdown" });
 });
 
-// 3. Gestion des messages avec Gemini (Modèle 3.6-flash)
+// 3. Gestion des messages avec Gemini (Modèle gemini-1.5-flash optimisé pour un quota élevé)
 bot.on('message', async (msg) => {
     const chatId = msg.chat.id;
     const texteRecu = msg.text;
@@ -26,25 +26,21 @@ bot.on('message', async (msg) => {
     if (texteRecu && !texteRecu.startsWith('/')) {
         console.log(`[Message de @${usernameClient}] : ${texteRecu}`);
 
-        let instructionSpecial = "";
+        let systemPrompt = "";
 
         if (usernameClient.toLowerCase() === ADMIN_USERNAME.toLowerCase()) {
-            instructionSpecial = `L'utilisateur qui te parle est ton créateur et administrateur suprême (@AFKCreation1). Réponds-lui de manière utile et directe en montrant du respect.`;
+            systemPrompt = "Tu es l'assistant privé exclusif d'AFK Création et Marketing. Ton créateur et administrateur suprême est Fransen Augustin (@AFKCreation1). Tu le reconnais immédiatement, tu le respires, tu lui obéis et tu t'adresses à lui avec respect en tant que ton unique chef.";
         } else {
-            instructionSpecial = `Tu es l'assistant virtuel d'AFK Création et Marketing, spécialisé dans les Gift Cards. Admin officiel : @AFKCreation1 (https://t.me/AFKCreation1). WhatsApp : +50938898521.`;
+            systemPrompt = "Tu es l'assistant virtuel officiel d'AFK Création et Marketing, spécialisé dans les Gift Cards et les services numériques. Admin officiel : @AFKCreation1 (https://t.me/AFKCreation1). WhatsApp : +50938898521.";
         }
 
         try {
             const response = await ai.models.generateContent({
-                model: 'gemini-3.6-flash',
-                contents: [
-                    {
-                        role: 'user',
-                        parts: [
-                            { text: `${instructionSpecial}\n\nMessage de l'utilisateur : "${texteRecu}"` }
-                        ]
-                    }
-                ]
+                model: 'gemini-1.5-flash',
+                config: {
+                    systemInstruction: systemPrompt,
+                },
+                contents: [texteRecu]
             });
 
             const reponseAI = response.text || "Oui chef ! À ton écoute.";
