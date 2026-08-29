@@ -4,7 +4,6 @@ const http = require('http');
 
 const telegramToken = process.env.TELEGRAM_BOT_TOKEN;
 
-// Configuration avec option de réinitialisation pour éviter les conflits 409
 const bot = new TelegramBot(telegramToken, { 
     polling: {
         interval: 300,
@@ -26,7 +25,7 @@ bot.onText(/\/start/, (msg) => {
     bot.sendMessage(chatId, "Bienvenue chez **AFK Création et Marketing** 🚀\n\nUtilise la commande `/pub [ton message]` pour publier une annonce sur la chaîne !", { parse_mode: "Markdown" });
 });
 
-// Commande /pub intelligente avec Groq
+// Commande /pub intelligente avec Groq (modèle mis à jour)
 bot.onText(/\/pub\s+(.+)?/, async (msg, match) => {
     const chatId = msg.chat.id;
     const instructionUtilisateur = match[1];
@@ -42,7 +41,7 @@ bot.onText(/\/pub\s+(.+)?/, async (msg, match) => {
 
     try {
         const completion = await groq.chat.completions.create({
-            model: "llama-3.3-70b-versatile",
+            model: "llama3-70b-8192", // Modèle stable de Groq
             messages: [
                 {
                     role: "system",
@@ -78,7 +77,7 @@ bot.onText(/\/stats/, (msg) => {
     bot.sendMessage(chatId, `📊 **Statistiques du Bot** :\n• Messages reçus aujourd'hui : ${messagesRecusAujourdhui}`);
 });
 
-// Gestion des messages et de l'IA (discussion classique)
+// Gestion des messages et de l'IA
 bot.on('message', async (msg) => {
     const chatId = msg.chat.id;
     const texteRecu = msg.text;
@@ -90,7 +89,7 @@ bot.on('message', async (msg) => {
 
         try {
             const completion = await groq.chat.completions.create({
-                model: "llama-3.3-70b-versatile",
+                model: "llama3-70b-8192", // Modèle stable de Groq
                 messages: [
                     {
                         role: "system",
