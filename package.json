@@ -12,6 +12,7 @@
   "type": "commonjs",
   "dependencies": {
     "@google/genai": "^2.19.0",
+    "@google/generative-ai": "^0.24.1",
     "node-telegram-bot-api": "^0.61.0"
   }
 }
