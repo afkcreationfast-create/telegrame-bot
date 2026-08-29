@@ -41,7 +41,7 @@ bot.onText(/\/pub\s+(.+)?/, async (msg, match) => {
 
     try {
         const completion = await groq.chat.completions.create({
-            model: "llama-3.1-8b-instant", // Modèle actif et recommandé par Groq
+            model: "llama3-8b-8192", // Modèle standard universel Groq
             messages: [
                 {
                     role: "system",
@@ -89,7 +89,7 @@ bot.on('message', async (msg) => {
 
         try {
             const completion = await groq.chat.completions.create({
-                model: "llama-3.1-8b-instant", // Modèle actif et recommandé par Groq
+                model: "llama3-8b-8192", // Modèle standard universel Groq
                 messages: [
                     {
                         role: "system",
