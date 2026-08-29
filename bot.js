@@ -19,6 +19,21 @@ const CHANNEL_ID = "@AFKcreation0";
 
 let messagesRecusAujourdhui = 0;
 
+// Fonction pour détecter et afficher les modèles disponibles au démarrage dans les logs Render
+async function verifierModelesGroq() {
+    try {
+        const list = await groq.models.list();
+        console.log("📌 MODÈLES DISPONIBLES SUR TON COMPTE GROQ :");
+        list.data.forEach(m => console.log(` - ${m.id}`));
+    } catch (e) {
+        console.error("Impossible de lister les modèles :", e.message);
+    }
+}
+verifierModelesGroq();
+
+// Modèle principal actuel de Groq
+const MODELE_GROQ = "llama-3.3-70b-versatile"; 
+
 // Commande /start
 bot.onText(/\/start/, (msg) => {
     const chatId = msg.chat.id;
@@ -41,7 +56,7 @@ bot.onText(/\/pub\s+(.+)?/, async (msg, match) => {
 
     try {
         const completion = await groq.chat.completions.create({
-            model: "llama3-8b-8192", // Modèle standard universel Groq
+            model: MODELE_GROQ,
             messages: [
                 {
                     role: "system",
@@ -89,7 +104,7 @@ bot.on('message', async (msg) => {
 
         try {
             const completion = await groq.chat.completions.create({
-                model: "llama3-8b-8192", // Modèle standard universel Groq
+                model: MODELE_GROQ,
                 messages: [
                     {
                         role: "system",
