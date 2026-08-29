@@ -25,7 +25,7 @@ bot.onText(/\/start/, (msg) => {
     bot.sendMessage(chatId, "Bienvenue chez **AFK Création et Marketing** 🚀\n\nUtilise la commande `/pub [ton message]` pour publier une annonce sur la chaîne !", { parse_mode: "Markdown" });
 });
 
-// Commande /pub intelligente avec Groq (modèle mis à jour)
+// Commande /pub intelligente avec Groq
 bot.onText(/\/pub\s+(.+)?/, async (msg, match) => {
     const chatId = msg.chat.id;
     const instructionUtilisateur = match[1];
@@ -41,7 +41,7 @@ bot.onText(/\/pub\s+(.+)?/, async (msg, match) => {
 
     try {
         const completion = await groq.chat.completions.create({
-            model: "llama3-70b-8192", // Modèle stable de Groq
+            model: "llama-3.1-8b-instant", // Modèle actif et recommandé par Groq
             messages: [
                 {
                     role: "system",
@@ -89,7 +89,7 @@ bot.on('message', async (msg) => {
 
         try {
             const completion = await groq.chat.completions.create({
-                model: "llama3-70b-8192", // Modèle stable de Groq
+                model: "llama-3.1-8b-instant", // Modèle actif et recommandé par Groq
                 messages: [
                     {
                         role: "system",
