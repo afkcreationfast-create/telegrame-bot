@@ -3,9 +3,18 @@ const Groq = require('groq-sdk');
 const http = require('http');
 
 const telegramToken = process.env.TELEGRAM_BOT_TOKEN;
-const bot = new TelegramBot(telegramToken, { polling: true });
 
-// Utilisation sécurisée de la variable d'environnement
+// Configuration avec option de réinitialisation pour éviter les conflits 409
+const bot = new TelegramBot(telegramToken, { 
+    polling: {
+        interval: 300,
+        autoStart: true,
+        params: {
+            timeout: 10
+        }
+    } 
+});
+
 const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 const CHANNEL_ID = "@AFKcreation0";
 
