@@ -1,18 +1,13 @@
 {
   "name": "telegrame-bot",
   "version": "1.0.0",
-  "description": "",
+  "description": "Bot Telegram AFK Création et Marketing",
   "main": "bot.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start": "node bot.js"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "type": "commonjs",
   "dependencies": {
-    "@google/genai": "^2.19.0",
-    "@google/generative-ai": "^0.24.1",
-    "node-telegram-bot-api": "^0.61.0"
+    "groq-sdk": "^0.3.3",
+    "node-telegram-bot-api": "^0.66.0"
   }
 }
