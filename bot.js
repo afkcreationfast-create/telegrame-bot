@@ -2,11 +2,11 @@ const TelegramBot = require('node-telegram-bot-api');
 const { GoogleGenAI } = require('@google/genai');
 const http = require('http');
 
-// 1. Configurations
-const telegramToken = '8618752669:AAGE01ZMLOZzV-9Gf2Lzcw1bTbvaJ4omU34';
+// 1. Configurations via les variables d'environnement de Render
+const telegramToken = process.env.TELEGRAM_BOT_TOKEN;
 const bot = new TelegramBot(telegramToken, { polling: true });
 
-// Initialisation de Gemini avec le SDK officiel et sécurisé via Render
+// Initialisation de Gemini avec la clé de Render
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
 const ADMIN_USERNAME = "AFKCreation1"; 
@@ -17,7 +17,7 @@ bot.onText(/\/start/, (msg) => {
     bot.sendMessage(chatId, "Bienvenue chez **AFK Création et Marketing** 🚀\n\nSpécialistes en **Gift Cards** 🎁\n\nContact : +50938898521 | afk.creation.fast@gmail.com", { parse_mode: "Markdown" });
 });
 
-// 3. Gestion des messages avec Gemini
+// 3. Gestion des messages avec Gemini (Modèle 3.6-flash)
 bot.on('message', async (msg) => {
     const chatId = msg.chat.id;
     const texteRecu = msg.text;
@@ -36,7 +36,7 @@ bot.on('message', async (msg) => {
 
         try {
             const response = await ai.models.generateContent({
-                model: 'gemini-2.5-flash',
+                model: 'gemini-3.6-flash',
                 contents: [
                     {
                         role: 'user',
