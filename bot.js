@@ -18,8 +18,6 @@ const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 const CHANNEL_ID = "@AFKcreation0";
 
 let messagesRecusAujourdhui = 0;
-
-// Utilisation du modèle valide extrait de ta liste Groq
 const MODELE_GROQ = "qwen/qwen3.8-27b"; 
 
 // Commande /start
@@ -62,11 +60,12 @@ bot.onText(/\/pub\s+(.+)?/, async (msg, match) => {
         textePubFinal = completion.choices[0]?.message?.content || "";
     } catch (error) {
         console.warn("⚠️ Erreur Groq, basculement sur le mode secours :", error.message);
-        textePubFinal = `🚀 **AFK Création et Marketing** 🚀\n\n✨ **Offre Exclusive** ✨\n${instructionUtilisateur}\n\n🎁 Service rapide et sécurisé !\n\n📞 **Contactez-nous :**\n• WhatsApp : +50938898521\n• Email : afk.creation.fast@gmail.com\n• Admin : @AFKCreation1`;
+        textePubFinal = `🚀 AFK Création et Marketing 🚀\n\n✨ Offre Exclusive ✨\n${instructionUtilisateur}\n\n🎁 Service rapide et sécurisé !\n\n📞 Contactez-nous :\n• WhatsApp : +50938898521\n• Email : afk.creation.fast@gmail.com\n• Admin : @AFKCreation1`;
     }
 
     try {
-        await bot.sendMessage(CHANNEL_ID, textePubFinal, { parse_mode: "Markdown" });
+        // Envoi sur le canal SANS parse_mode pour éviter les erreurs de syntaxe Markdown de l'IA
+        await bot.sendMessage(CHANNEL_ID, textePubFinal);
         bot.sendMessage(chatId, "✅ Annonce publiée avec succès sur la chaîne !\n\n*Message publié :*\n\n" + textePubFinal, { parse_mode: "Markdown" });
     } catch (err) {
         console.error("Erreur lors de l'envoi sur le canal :", err.message);
