@@ -20,6 +20,11 @@ const CHANNEL_ID = "@AFKcreation0";
 let messagesRecusAujourdhui = 0;
 const MODELE_GROQ = "qwen/qwen3.8-27b"; 
 
+// Gestion propre des erreurs de polling pour éviter les crashs du bot
+bot.on('polling_error', (error) => {
+    console.log(`[Erreur de polling Telegram] : ${error.code} - ${error.message}`);
+});
+
 // Commande /start
 bot.onText(/\/start/, (msg) => {
     const chatId = msg.chat.id;
@@ -64,7 +69,6 @@ bot.onText(/\/pub\s+(.+)?/, async (msg, match) => {
     }
 
     try {
-        // Envoi sur le canal SANS parse_mode pour éviter les erreurs de syntaxe Markdown de l'IA
         await bot.sendMessage(CHANNEL_ID, textePubFinal);
         bot.sendMessage(chatId, "✅ Annonce publiée avec succès sur la chaîne !\n\n*Message publié :*\n\n" + textePubFinal, { parse_mode: "Markdown" });
     } catch (err) {
@@ -118,7 +122,7 @@ bot.on('message', async (msg) => {
 
 const server = http.createServer((req, res) => {
     res.writeHead(200, { 'Content-Type': 'text/plain' });
-    res.end('Bot AFK est en ligne !\n');
+    res.end('Bot AFK est en ligne 24/7 !\n');
 });
 
 const PORT = process.env.PORT || 3000;
