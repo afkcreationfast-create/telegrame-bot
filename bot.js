@@ -68,7 +68,7 @@ bot.onText(/\/pub\s+(.+)?/, async (msg, match) => {
     try {
         await bot.sendMessage(CHANNEL_ID, textePubFinal);
         bot.sendMessage(chatId, "✅ Annonce publiée avec succès sur la chaîne !\n\n*Message publié :*\n\n" + textePubFinal, { parse_mode: "Markdown" });
-    } connaisErr => {
+    } catch (err) {
         console.error("Erreur lors de l'envoi sur le canal :", err.message);
         bot.sendMessage(chatId, "❌ Erreur Telegram : " + err.message);
     }
