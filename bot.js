@@ -17,6 +17,9 @@ const bot = new TelegramBot(telegramToken, {
 const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 const CHANNEL_ID = "@AFKcreation0";
 
+// Ton username administrateur officiel
+const ADMIN_USERNAME = "AFKCreation1";
+
 let messagesRecusAujourdhui = 0;
 const MODELE_GROQ = "qwen/qwen3.8-27b"; 
 
@@ -26,12 +29,25 @@ bot.on('polling_error', (error) => {
 
 bot.onText(/\/start/, (msg) => {
     const chatId = msg.chat.id;
-    bot.sendMessage(chatId, "Bienvenue chez **AFK Création et Marketing** 🚀\n\nBoutique en ligne : https://afkmarketing.myshopify.com/\n\nUtilise la commande `/pub [ton message]` pour publier une annonce sur la chaîne !", { parse_mode: "Markdown" });
+    const username = msg.from.username;
+
+    if (username === ADMIN_USERNAME) {
+        bot.sendMessage(chatId, "Bienvenue Chef 🚀\n\nLe bot **AFK Création et Marketing** est connecté à ton compte administrateur.\nUtilise `/pub [ton message]` pour publier sur la chaîne !", { parse_mode: "Markdown" });
+    } else {
+        bot.sendMessage(chatId, "Bienvenue chez **AFK Création et Marketing** 🚀\n\nVisite notre boutique en ligne : https://afkmarketing.myshopify.com/\nComment pouvons-nous t'aider aujourd'hui ?", { parse_mode: "Markdown" });
+    }
 });
 
 bot.onText(/\/pub\s+(.+)?/, async (msg, match) => {
     const chatId = msg.chat.id;
+    const username = msg.from.username;
     const instructionUtilisateur = match[1];
+
+    // Vérification de sécurité : seule l'admin (@AFKCreation1) peut publier
+    if (username !== ADMIN_USERNAME) {
+        bot.sendMessage(chatId, "❌ Désolé, cette commande est réservée à l'administrateur d'AFK Création et Marketing.");
+        return;
+    }
 
     if (!instructionUtilisateur) {
         bot.sendMessage(chatId, "⚠️ Dis-moi quoi mettre dans la pub ! Exemple : `/pub promotion sur les cartes mastercard silver à 1600 htg`", { parse_mode: "Markdown" });
@@ -76,6 +92,13 @@ bot.onText(/\/pub\s+(.+)?/, async (msg, match) => {
 
 bot.onText(/\/stats/, (msg) => {
     const chatId = msg.chat.id;
+    const username = msg.from.username;
+
+    if (username !== ADMIN_USERNAME) {
+        bot.sendMessage(chatId, "❌ Commande réservée à l'administrateur.");
+        return;
+    }
+
     bot.sendMessage(chatId, `📊 **Statistiques du Bot** :\n• Messages reçus aujourd'hui : ${messagesRecusAujourdhui}`);
 });
 
@@ -88,26 +111,30 @@ bot.on('message', async (msg) => {
         messagesRecusAujourdhui++;
         console.log(`[Message de @${usernameClient}] : ${texteRecu}`);
 
+        // Détermine si c'est toi ou un client lambda
+        const estAdmin = (usernameClient === ADMIN_USERNAME);
+
+        let systemPrompt = "";
+        if (estAdmin) {
+            systemPrompt = `Tu t'adresses directement à ton créateur et administrateur d'AFK Création et Marketing (@AFKCreation1). Sois respectueux, obéissant, appelle-le "Chef" ou "Boss", et réponds à ses demandes ou tests de configuration.`;
+        } else {
+            systemPrompt = `Tu es l'assistant virtuel officiel d'AFK Création et Marketing (boutique : https://afkmarketing.myshopify.com/). 
+            Catalogue officiel et tarifs à respecter strictement :
+            - Abonnements Netflix Premium : 500.00 HTG.
+            - Recharge Diamants Free Fire : À partir de 160.00 HTG.
+            - Cartes virtuelles Mastercard / Visa (Sutton Bank, USA, 3D Secure, paiement MonCash et NetCash) :
+              * Mastercard Silver : 1 600 HTG (Limite 50,000/jour)
+              * VISA Classic : 2 400 HTG (Limite 50,000/jour)
+              * Mastercard Elite : 4 000 HTG (Limite 100,000/jour, compatible Apple Pay & Google Pay)
+            Contact WhatsApp officiel pour commander ou payer : +50938898521. Sois aimable, professionnel et concis avec les clients.`;
+        }
+
         try {
             const completion = await groq.chat.completions.create({
                 model: MODELE_GROQ,
                 messages: [
-                    {
-                        role: "system",
-                        content: `Tu es l'assistant virtuel officiel d'AFK Création et Marketing (boutique : https://afkmarketing.myshopify.com/), dirigé par Fransen Augustin (@AFKCreation1). 
-                        Voici le catalogue officiel et les prix de la boutique à respecter strictement pour renseigner les clients :
-                        - Produits virtuels / Abonnements : Abonnement Netflix Premium à 500.00 HTG.
-                        - Jeux : Recharge Diamants Free Fire à partir de 160.00 HTG.
-                        - Cartes virtuelles Mastercard / Visa (Sutton Bank, USA, 3D Secure, paiement MonCash et NetCash) :
-                          * Mastercard Silver : 1 600 HTG (Limite 50,000/jour)
-                          * VISA Classic : 2 400 HTG (Limite 50,000/jour)
-                          * Mastercard Elite : 4 000 HTG (Limite 100,000/jour, compatible Apple Pay & Google Pay)
-                        Contact WhatsApp officiel pour commander ou payer : +50938898521. Sois aimable, professionnel et concis.`
-                    },
-                    {
-                        role: "user",
-                        content: texteRecu
-                    }
+                    { role: "system", content: systemPrompt },
+                    { role: "user", content: texteRecu }
                 ],
                 temperature: 0.7,
                 max_tokens: 512
@@ -133,4 +160,4 @@ server.listen(PORT, () => {
     console.log(`Serveur web en écoute sur le port ${PORT}`);
 });
 
-console.log("Bot AFK opérationnel avec Groq et catalogue Shopify !");
+console.log("Bot AFK opérationnel avec Groq et reconnaissance Admin !");
