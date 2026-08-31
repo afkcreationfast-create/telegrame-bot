@@ -14,6 +14,8 @@ const NUMERO_AUTORISE = "50938898521"; // Numéro cible WhatsApp
 const MODELE_GROQ = "qwen/qwen3.8-27b";  
 
 let messagesRecusAujourdhui = 0;
+let dernierQrCodeData = null; // Variable pour stocker le dernier QR code généré
+let estConnecteWhatsApp = false;
 
 // ==========================================
 // 1. CONFIGURATION DU BOT TELEGRAM (Répond à tout)
@@ -104,7 +106,6 @@ bot.onText(/\/stats/, (msg) => {
     bot.sendMessage(chatId, `📊 **Statistiques du Bot** :\n• Messages reçus aujourd'hui : ${messagesRecusAujourdhui}`);
 });
 
-// SUR TELEGRAM : Répond à TOUS les messages texte normaux sans filtre
 bot.on('message', async (msg) => {
     const chatId = msg.chat.id;
     const texteRecu = msg.text;
@@ -154,7 +155,7 @@ bot.on('message', async (msg) => {
 
 
 // ==========================================
-// 2. CONFIGURATION DU BOT WHATSAPP (Via QR code texte propre + filtre .ai)
+// 2. CONFIGURATION DU BOT WHATSAPP
 // ==========================================
 async function connectToWhatsApp() {
     const { state, saveCreds } = await useMultiFileAuthState('auth_info_baileys');
@@ -167,21 +168,24 @@ async function connectToWhatsApp() {
         const { connection, lastDisconnect, qr } = update;
 
         if (qr) {
-            console.log("📱 [WHATSAPP] Nouveau QR Code généré :");
+            console.log("📱 [WHATSAPP] Nouveau QR Code généré pour le web !");
             try {
-                const asciiQR = await QRCode.toString(qr, { type: 'terminal', small: true });
-                console.log(asciiQR);
+                // Convertit le QR code en image Data URL (PNG)
+                dernierQrCodeData = await QRCode.toDataURL(qr);
             } catch (err) {
-                console.error("Erreur d'affichage du QR code :", err);
+                console.error("Erreur de conversion du QR code en image :", err);
             }
         }
 
         if (connection === 'close') {
+            estConnecteWhatsApp = false;
             const shouldReconnect = (lastDisconnect?.error instanceof Boom)?.output?.statusCode !== DisconnectReason.loggedOut;
             console.log('Connexion WhatsApp fermée, reconnexion...', shouldReconnect);
             if (shouldReconnect) connectToWhatsApp();
         } else if (connection === 'open') {
-            console.log('✅ Bot WhatsApp connecté et opérationnel 24/7 en tant qu\'appareil supplémentaire !');
+            estConnecteWhatsApp = true;
+            dernierQrCodeData = null; // Nettoie le QR code une fois connecté
+            console.log('✅ Bot WhatsApp connecté et opérationnel 24/7 !');
         }
     });
 
@@ -236,16 +240,59 @@ async function connectToWhatsApp() {
     });
 }
 
-// Lancement de WhatsApp
 connectToWhatsApp();
 
 
 // ==========================================
-// 3. SERVEUR WEB GLOBAL (Maintien UptimeRobot)
+// 3. SERVEUR WEB GLOBAL (Affiche le QR code et sert UptimeRobot)
 // ==========================================
 const server = http.createServer((req, res) => {
-    res.writeHead(200, { 'Content-Type': 'text/plain' });
-    res.end('Bot AFK Global (Telegram + WhatsApp) en ligne 24/7 !\n');
+    res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+
+    if (estConnecteWhatsApp) {
+        res.end(`
+            <html>
+                <head><title>AFK Bot Global</title></head>
+                <body style="font-family: Arial, sans-serif; text-align: center; margin-top: 50px; background-color: #f4f7f6;">
+                    <div style="background: white; padding: 30px; border-radius: 10px; display: inline-block; box-shadow: 0px 4px 10px rgba(0,0,0,0.1);">
+                        <h1 style="color: #2e7d32;">✅ Bot WhatsApp Connecté !</h1>
+                        <p>Le bot <b>AFK Création et Marketing</b> (Telegram + WhatsApp) est en ligne et opérationnel 24/7.</p>
+                        <p style="color: gray; font-size: 14px;">UptimeRobot actif 🚀</p>
+                    </div>
+                </body>
+            </html>
+        `);
+    } else if (dernierQrCodeData) {
+        res.end(`
+            <html>
+                <head>
+                    <title>Scanner QR Code - AFK Bot</title>
+                    <meta http-equiv="refresh" content="5"> <!-- Rafraîchit la page toutes les 5 secondes pour avoir un QR code à jour -->
+                </head>
+                <body style="font-family: Arial, sans-serif; text-align: center; margin-top: 40px; background-color: #f4f7f6;">
+                    <div style="background: white; padding: 30px; border-radius: 10px; display: inline-block; box-shadow: 0px 4px 10px rgba(0,0,0,0.1);">
+                        <h2 style="color: #d32f2f;">📱 Connexion WhatsApp requise</h2>
+                        <p>Scanne ce QR code avec ton application WhatsApp (Appareils connectés) :</p>
+                        <img src="${dernierQrCodeData}" alt="QR Code WhatsApp" style="width: 300px; height: 300px; border: 5px solid #ddd; border-radius: 8px;"/>
+                        <p style="color: gray; font-size: 12px; margin-top: 15px;">Cette page se rafraîchit automatiquement toutes les 5 secondes.</p>
+                    </div>
+                </body>
+            </html>
+        `);
+    } else {
+        res.end(`
+            <html>
+                <head>
+                    <title>Chargement - AFK Bot</title>
+                    <meta http-equiv="refresh" content="3">
+                </head>
+                <body style="font-family: Arial, sans-serif; text-align: center; margin-top: 50px;">
+                    <h2>⏳ Génération du QR code en cours...</h2>
+                    <p>Veuillez patienter quelques secondes, la page va se recharger.</p>
+                </body>
+            </html>
+        `);
+    }
 });
 
 const PORT = process.env.PORT || 3000;
@@ -253,4 +300,4 @@ server.listen(PORT, () => {
     console.log(`Serveur web global en écoute sur le port ${PORT}`);
 });
 
-console.log("Système global initialisé : Telegram répond à tout, WhatsApp écoute avec .ai !");
+console.log("Système global initialisé : Interface QR code web activée !");
