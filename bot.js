@@ -3,7 +3,7 @@ const { default: makeWASocket, useMultiFileAuthState, DisconnectReason } = requi
 const { Boom } = require('@hapi/boom');
 const Groq = require('groq-sdk');
 const http = require('http');
-const qrcode = require('qrcode-terminal');
+const QRCode = require('qrcode');
 
 // Configuration des clés et identifiants
 const telegramToken = process.env.TELEGRAM_BOT_TOKEN;
@@ -154,7 +154,7 @@ bot.on('message', async (msg) => {
 
 
 // ==========================================
-// 2. CONFIGURATION DU BOT WHATSAPP (Via QR code dans les logs + filtre .ai)
+// 2. CONFIGURATION DU BOT WHATSAPP (Via QR code texte propre + filtre .ai)
 // ==========================================
 async function connectToWhatsApp() {
     const { state, saveCreds } = await useMultiFileAuthState('auth_info_baileys');
@@ -163,12 +163,17 @@ async function connectToWhatsApp() {
         auth: state
     });
 
-    sock.ev.on('connection.update', (update) => {
+    sock.ev.on('connection.update', async (update) => {
         const { connection, lastDisconnect, qr } = update;
 
         if (qr) {
-            console.log("📱 [WHATSAPP] Scannez ce QR code avec votre téléphone :");
-            qrcode.generate(qr, { small: true });
+            console.log("📱 [WHATSAPP] Nouveau QR Code généré :");
+            try {
+                const asciiQR = await QRCode.toString(qr, { type: 'terminal', small: true });
+                console.log(asciiQR);
+            } catch (err) {
+                console.error("Erreur d'affichage du QR code :", err);
+            }
         }
 
         if (connection === 'close') {
@@ -189,7 +194,6 @@ async function connectToWhatsApp() {
         const remoteJid = msg.key.remoteJid;
         const texteMessage = msg.message.conversation || msg.message.extendedTextMessage?.text || "";
 
-        // Vérifie si le message concerne ou provient du numéro autorisé et s'il commence par ".ai"
         const estNumeroConcerne = remoteJid.includes(NUMERO_AUTORISE);
 
         if (estNumeroConcerne && texteMessage.trim().toLowerCase().startsWith('.ai')) {
