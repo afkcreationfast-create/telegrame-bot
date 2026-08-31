@@ -3,20 +3,22 @@ const { default: makeWASocket, useMultiFileAuthState, DisconnectReason } = requi
 const { Boom } = require('@hapi/boom');
 const Groq = require('groq-sdk');
 const http = require('http');
+const qrcode = require('qrcode-terminal');
 
 // Configuration des clés et identifiants
 const telegramToken = process.env.TELEGRAM_BOT_TOKEN;
 const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 const CHANNEL_ID = "@AFKcreation0";
 const ADMIN_USERNAME = "AFKCreation1";
-const MODELE_GROQ = "qwen/qwen3.8-27b"; 
+const NUMERO_AUTORISE = "50938898521"; // Numéro cible WhatsApp
+const MODELE_GROQ = "qwen/qwen3.8-27b";  
 
 let messagesRecusAujourdhui = 0;
 
 // ==========================================
 // 1. CONFIGURATION DU BOT TELEGRAM (Répond à tout)
 // ==========================================
-const bot = new TelegramBot(telegramToken, { 
+const bot = new TelegramBot(telegramToken, {  
     polling: {
         interval: 300,
         autoStart: true,
@@ -152,18 +154,23 @@ bot.on('message', async (msg) => {
 
 
 // ==========================================
-// 2. CONFIGURATION DU BOT WHATSAPP (Via QR code + filtre .ai)
+// 2. CONFIGURATION DU BOT WHATSAPP (Via QR code dans les logs + filtre .ai)
 // ==========================================
 async function connectToWhatsApp() {
     const { state, saveCreds } = await useMultiFileAuthState('auth_info_baileys');
 
     const sock = makeWASocket({
-        auth: state,
-        printQRInTerminal: true
+        auth: state
     });
 
     sock.ev.on('connection.update', (update) => {
-        const { connection, lastDisconnect } = update;
+        const { connection, lastDisconnect, qr } = update;
+
+        if (qr) {
+            console.log("📱 [WHATSAPP] Scannez ce QR code avec votre téléphone :");
+            qrcode.generate(qr, { small: true });
+        }
+
         if (connection === 'close') {
             const shouldReconnect = (lastDisconnect?.error instanceof Boom)?.output?.statusCode !== DisconnectReason.loggedOut;
             console.log('Connexion WhatsApp fermée, reconnexion...', shouldReconnect);
@@ -182,10 +189,12 @@ async function connectToWhatsApp() {
         const remoteJid = msg.key.remoteJid;
         const texteMessage = msg.message.conversation || msg.message.extendedTextMessage?.text || "";
 
-        // SUR WHATSAPP : L'IA ne répond QUE si le message commence par ".ai"
-        if (texteMessage.trim().toLowerCase().startsWith('.ai')) {
+        // Vérifie si le message concerne ou provient du numéro autorisé et s'il commence par ".ai"
+        const estNumeroConcerne = remoteJid.includes(NUMERO_AUTORISE);
+
+        if (estNumeroConcerne && texteMessage.trim().toLowerCase().startsWith('.ai')) {
             const promptUtilisateur = texteMessage.replace(/^\.ai/i, '').trim();
-            console.log(`[WhatsApp AI] Demande reçue : ${promptUtilisateur}`);
+            console.log(`[WhatsApp AI] Demande reçue du +${NUMERO_AUTORISE} : ${promptUtilisateur}`);
 
             try {
                 const completion = await groq.chat.completions.create({
