@@ -1,12 +1,14 @@
 {
   "name": "telegrame-bot",
   "version": "1.0.0",
-  "description": "Bot Telegram AFK Création et Marketing",
+  "description": "Bot Global AFK Création et Marketing (Telegram & WhatsApp)",
   "main": "bot.js",
   "scripts": {
     "start": "node bot.js"
   },
   "dependencies": {
+    "@hapi/boom": "^10.0.1",
+    "@whiskeysockets/baileys": "^6.7.12",
     "groq-sdk": "^0.3.3",
     "node-telegram-bot-api": "^0.66.0"
   }

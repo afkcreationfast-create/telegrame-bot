@@ -1,27 +1,28 @@
 const TelegramBot = require('node-telegram-bot-api');
+const { default: makeWASocket, useMultiFileAuthState, DisconnectReason } = require('@whiskeysockets/baileys');
+const { Boom } = require('@hapi/boom');
 const Groq = require('groq-sdk');
 const http = require('http');
 
+// Configuration des clés et identifiants
 const telegramToken = process.env.TELEGRAM_BOT_TOKEN;
+const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
+const CHANNEL_ID = "@AFKcreation0";
+const ADMIN_USERNAME = "AFKCreation1";
+const MODELE_GROQ = "qwen/qwen3.8-27b"; 
 
+let messagesRecusAujourdhui = 0;
+
+// ==========================================
+// 1. CONFIGURATION DU BOT TELEGRAM (Répond à tout)
+// ==========================================
 const bot = new TelegramBot(telegramToken, { 
     polling: {
         interval: 300,
         autoStart: true,
-        params: {
-            timeout: 10
-        }
+        params: { timeout: 10 }
     } 
 });
-
-const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
-const CHANNEL_ID = "@AFKcreation0";
-
-// Ton username administrateur officiel
-const ADMIN_USERNAME = "AFKCreation1";
-
-let messagesRecusAujourdhui = 0;
-const MODELE_GROQ = "qwen/qwen3.8-27b"; 
 
 bot.on('polling_error', (error) => {
     console.log(`[Erreur de polling Telegram] : ${error.code} - ${error.message}`);
@@ -43,7 +44,6 @@ bot.onText(/\/pub\s+(.+)?/, async (msg, match) => {
     const username = msg.from.username;
     const instructionUtilisateur = match[1];
 
-    // Vérification de sécurité : seule l'admin (@AFKCreation1) peut publier
     if (username !== ADMIN_USERNAME) {
         bot.sendMessage(chatId, "❌ Désolé, cette commande est réservée à l'administrateur d'AFK Création et Marketing.");
         return;
@@ -102,6 +102,7 @@ bot.onText(/\/stats/, (msg) => {
     bot.sendMessage(chatId, `📊 **Statistiques du Bot** :\n• Messages reçus aujourd'hui : ${messagesRecusAujourdhui}`);
 });
 
+// SUR TELEGRAM : Répond à TOUS les messages texte normaux sans filtre
 bot.on('message', async (msg) => {
     const chatId = msg.chat.id;
     const texteRecu = msg.text;
@@ -109,9 +110,8 @@ bot.on('message', async (msg) => {
 
     if (texteRecu && !texteRecu.startsWith('/')) {
         messagesRecusAujourdhui++;
-        console.log(`[Message de @${usernameClient}] : ${texteRecu}`);
+        console.log(`[Message Telegram de @${usernameClient}] : ${texteRecu}`);
 
-        // Détermine si c'est toi ou un client lambda
         const estAdmin = (usernameClient === ADMIN_USERNAME);
 
         let systemPrompt = "";
@@ -150,14 +150,94 @@ bot.on('message', async (msg) => {
     }
 });
 
+
+// ==========================================
+// 2. CONFIGURATION DU BOT WHATSAPP (Via QR code + filtre .ai)
+// ==========================================
+async function connectToWhatsApp() {
+    const { state, saveCreds } = await useMultiFileAuthState('auth_info_baileys');
+
+    const sock = makeWASocket({
+        auth: state,
+        printQRInTerminal: true
+    });
+
+    sock.ev.on('connection.update', (update) => {
+        const { connection, lastDisconnect } = update;
+        if (connection === 'close') {
+            const shouldReconnect = (lastDisconnect?.error instanceof Boom)?.output?.statusCode !== DisconnectReason.loggedOut;
+            console.log('Connexion WhatsApp fermée, reconnexion...', shouldReconnect);
+            if (shouldReconnect) connectToWhatsApp();
+        } else if (connection === 'open') {
+            console.log('✅ Bot WhatsApp connecté et opérationnel 24/7 en tant qu\'appareil supplémentaire !');
+        }
+    });
+
+    sock.ev.on('creds.update', saveCreds);
+
+    sock.ev.on('messages.upsert', async (m) => {
+        const msg = m.messages[0];
+        if (!msg.message || msg.key.fromMe) return;
+
+        const remoteJid = msg.key.remoteJid;
+        const texteMessage = msg.message.conversation || msg.message.extendedTextMessage?.text || "";
+
+        // SUR WHATSAPP : L'IA ne répond QUE si le message commence par ".ai"
+        if (texteMessage.trim().toLowerCase().startsWith('.ai')) {
+            const promptUtilisateur = texteMessage.replace(/^\.ai/i, '').trim();
+            console.log(`[WhatsApp AI] Demande reçue : ${promptUtilisateur}`);
+
+            try {
+                const completion = await groq.chat.completions.create({
+                    model: MODELE_GROQ,
+                    messages: [
+                        {
+                            role: "system",
+                            content: `Tu es l'assistant virtuel officiel d'AFK Création et Marketing (boutique : https://afkmarketing.myshopify.com/). 
+                            Catalogue officiel et tarifs à respecter strictement :
+                            - Abonnements Netflix Premium : 500.00 HTG.
+                            - Recharge Diamants Free Fire : À partir de 160.00 HTG.
+                            - Cartes virtuelles Mastercard / Visa (Sutton Bank, USA, 3D Secure, paiement MonCash et NetCash) :
+                              * Mastercard Silver : 1 600 HTG (Limite 50,000/jour)
+                              * VISA Classic : 2 400 HTG (Limite 50,000/jour)
+                              * Mastercard Elite : 4 000 HTG (Limite 100,000/jour, compatible Apple Pay & Google Pay)
+                            Contact WhatsApp officiel : +50938898521. Sois aimable, professionnel et concis.`
+                        },
+                        {
+                            role: "user",
+                            content: promptUtilisateur
+                        }
+                    ],
+                    temperature: 0.7,
+                    max_tokens: 512
+                });
+
+                const reponseAI = completion.choices[0]?.message?.content || "Oui chef ! À ton écoute.";
+                await sock.sendMessage(remoteJid, { text: reponseAI });
+
+            } catch (error) {
+                console.error("Erreur Groq WhatsApp :", error.message);
+                await sock.sendMessage(remoteJid, { text: "⚠️ Désolé, une erreur est survenue avec l'IA." });
+            }
+        }
+    });
+}
+
+// Lancement de WhatsApp
+connectToWhatsApp();
+
+
+// ==========================================
+// 3. SERVEUR WEB GLOBAL (Maintien UptimeRobot)
+// ==========================================
 const server = http.createServer((req, res) => {
     res.writeHead(200, { 'Content-Type': 'text/plain' });
-    res.end('Bot AFK est en ligne 24/7 !\n');
+    res.end('Bot AFK Global (Telegram + WhatsApp) en ligne 24/7 !\n');
 });
 
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
-    console.log(`Serveur web en écoute sur le port ${PORT}`);
+    console.log(`Serveur web global en écoute sur le port ${PORT}`);
 });
 
-console.log("Bot AFK opérationnel avec Groq et reconnaissance Admin !");
+console.log("Système global initialisé : Telegram répond à tout, WhatsApp écoute avec .ai !");
