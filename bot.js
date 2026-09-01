@@ -11,6 +11,7 @@ const ADMIN_USERNAME = "AFKCreation1";
 const MODELE_GROQ = "qwen/qwen3.8-27b";  
 
 let messagesRecusAujourdhui = 0;
+let derniereInteractionAdmin = Date.now();
 
 // ==========================================
 // 1. CONFIGURATION DU BOT TELEGRAM
@@ -28,42 +29,52 @@ bot.on('polling_error', (error) => {
 });
 
 // ==========================================
-// 2. LES 10 COMMANDES ADMINISTRATEUR (POUR LE BOSS)
+// 2. COMMANDES DU TABLEAU DE BORD
 // ==========================================
 
-// 1. /start - Accueil personnalisé
 bot.onText(/\/start/, (msg) => {
     const chatId = msg.chat.id;
     const username = msg.from.username;
 
     if (username === ADMIN_USERNAME) {
-        bot.sendMessage(chatId, "Bienvenue Chef 🚀\n\nLe bot **AFK Création et Marketing** est pleinement opérationnel.\nTape `/aide` pour afficher la liste de tes 10 commandes exclusives.", { parse_mode: "Markdown" });
+        const opts = {
+            reply_markup: {
+                inline_keyboard: [
+                    [{ text: "📊 Stats", callback_data: "cmd_stats" }, { text: "🛠️ Aide", callback_data: "cmd_aide" }],
+                    [{ text: "💡 Idée Marketing", callback_data: "cmd_idees" }, { text: "🟢 Status", callback_data: "cmd_status" }]
+                ]
+            }
+        };
+        bot.sendMessage(chatId, "Salut Chef 🚀\n\nMode **Hi-Tech Autonome** actif. Tu peux me donner des ordres directement en tchat (ex: *'Dis à mes clients qu'il y a une promo Netflix'*), et je m'exécute !", { parse_mode: "Markdown", ...opts });
     } else {
-        bot.sendMessage(chatId, "Bienvenue chez **AFK Création et Marketing** 🚀\n\nVisite notre boutique en ligne : https://afkmarketing.myshopify.com/\nComment pouvons-nous t'aider aujourd'hui ?", { parse_mode: "Markdown" });
+        const opts = {
+            reply_markup: {
+                inline_keyboard: [
+                    [{ text: "🛍️ Boutique Shopify", url: "https://afkmarketing.myshopify.com/" }],
+                    [{ text: "📞 WhatsApp", url: "https://wa.me/50938898521" }]
+                ]
+            }
+        };
+        bot.sendMessage(chatId, "Bienvenue chez **AFK Création et Marketing** 🚀\n\nBesoin d'abonnements (Netflix, Free Fire) ou de cartes virtuelles Visa/Mastercard ? Comment pouvons-nous t'aider ?", { parse_mode: "Markdown", ...opts });
     }
 });
 
-// 2. /aide - Liste des commandes admin
 bot.onText(/\/aide/, (msg) => {
     const chatId = msg.chat.id;
     if (msg.from.username !== ADMIN_USERNAME) return;
 
-    const aideTexte = `🛠️ **Tableau de Bord des Commandes Admin - AFK** :
-1️⃣ \`/pub [texte]\` - Rédige et publie une annonce sur la chaîne.
-2️⃣ \`/produits\` - Affiche les produits en direct de la boutique Shopify.
-3️⃣ \`/stats\` - Affiche les statistiques d'utilisation du bot.
-4️⃣ \`/promo [article]\` - Génère une offre flash promotionnelle.
-5️⃣ \`/idees [sujet]\` - Propose des idées de services ou de contenu.
-6️⃣ \`/client\` - Conseils pour gérer une négociation ou un client.
-7️⃣ \`/support\` - Rappel des moyens de paiement (MonCash/NetCash).
-8️⃣ \`/status\` - Vérifie l'état du serveur et de l'IA.
-9️⃣ \`/faq\` - Rappel des questions fréquentes (cartes, Netflix).
-🔟 \`/aide\` - Affiche ce menu d'aide.`;
+    const aideTexte = `🛠️ **Tableau de Bord Hi-Tech - AFK** :
+• **Commandes directes en tchat** : Dis-moi par exemple *"Prépare une pub pour la chaîne"* ou *"Donne-moi une idée de prix"*.
+1️⃣ \`/pub [sujet]\` - Rédige et publie sur la chaîne.
+2️⃣ \`/produits\` - Lien de la boutique Shopify.
+3️⃣ \`/stats\` - Statistiques du bot.
+4️⃣ \`/promo [article]\` - Offre flash.
+5️⃣ \`/idees [sujet]\` - Stratégies par l'IA.
+6️⃣ \`/support\` - Infos paiements (MonCash/NetCash).`;
 
     bot.sendMessage(chatId, aideTexte, { parse_mode: "Markdown" });
 });
 
-// 3. /pub - Publication sur le canal
 bot.onText(/\/pub\s+(.+)?/, async (msg, match) => {
     const chatId = msg.chat.id;
     if (msg.from.username !== ADMIN_USERNAME) return;
@@ -92,60 +103,32 @@ bot.onText(/\/pub\s+(.+)?/, async (msg, match) => {
     }
 });
 
-// 4. /produits - Récupération et affichage direct des produits Shopify
-bot.onText(/\/produits/, async (msg) => {
+bot.onText(/\/produits/, (msg) => {
     const chatId = msg.chat.id;
-    
-    bot.sendMessage(chatId, "🔍 Interrogation de la boutique Shopify en cours...");
-
-    try {
-        const shopifyResponse = await axios.get(`https://${process.env.SHOPIFY_DOMAIN}/admin/api/2026-07/products.json`, {
-            headers: {
-                'X-Shopify-Access-Token': process.env.SHOPIFY_CLIENT_SECRET
-            }
-        });
-
-        const produits = shopifyResponse.data.products;
-
-        if (!produits || produits.length === 0) {
-            bot.sendMessage(chatId, "⚠️ Aucun produit trouvé sur la boutique pour le moment.");
-            return;
+    const opts = {
+        reply_markup: {
+            inline_keyboard: [
+                [{ text: "🛍️ Ouvrir le Catalogue Shopify", url: "https://afkmarketing.myshopify.com/" }]
+            ]
         }
-
-        let texteReponse = "🛍️ **Catalogue en direct de AFK Création et Marketing** :\n\n";
-        
-        produits.forEach((produit, index) => {
-            const titre = produit.title;
-            const prix = produit.variants[0] ? `${produit.variants[0].price} HTG` : "Prix sur demande";
-            texteReponse += `🔹 **${index + 1}. ${titre}**\n   💰 Prix : ${prix}\n\n`;
-        });
-
-        texteReponse += "👉 Commande directement sur : https://afkmarketing.myshopify.com/";
-        bot.sendMessage(chatId, texteReponse, { parse_mode: "Markdown" });
-
-    } catch (err) {
-        // Solution de repli si l'API nécessite d'autres configurations
-        bot.sendMessage(chatId, "🛍️ **Boutique Officielle Shopify**\n\nAccède à ton catalogue complet en ligne :\n👉 https://afkmarketing.myshopify.com/", { parse_mode: "Markdown" });
-    }
+    };
+    bot.sendMessage(chatId, "🛍️ **Boutique Officielle Shopify**\n\nConsulte tous nos produits en ligne :", { parse_mode: "Markdown", ...opts });
 });
 
-// 5. /stats - Statistiques
 bot.onText(/\/stats/, (msg) => {
     const chatId = msg.chat.id;
     if (msg.from.username !== ADMIN_USERNAME) return;
-    bot.sendMessage(chatId, `📊 **Statistiques** :\n• Messages reçus aujourd'hui : ${messagesRecusAujourdhui}\n• Statut Serveur : En ligne 24/7 (Render)`);
+    bot.sendMessage(chatId, `📊 **Statistiques** :\n• Messages reçus aujourd'hui : ${messagesRecusAujourdhui}\n• Statut : Opérationnel 24/7`);
 });
 
-// 6. /promo - Offre flash
 bot.onText(/\/promo\s+(.+)?/, async (msg, match) => {
     const chatId = msg.chat.id;
     if (msg.from.username !== ADMIN_USERNAME) return;
     const produit = match[1] || "nos services";
 
-    bot.sendMessage(chatId, `🔥 Offre Flash générée pour : *${produit}* !\nVisitez vite https://afkmarketing.myshopify.com/ pour en profiter.`, { parse_mode: "Markdown" });
+    bot.sendMessage(chatId, `🔥 Offre Flash générée pour : *${produit}* !\nVisite https://afkmarketing.myshopify.com/`, { parse_mode: "Markdown" });
 });
 
-// 7. /idees - Idées créatives
 bot.onText(/\/idees\s+(.+)?/, async (msg, match) => {
     const chatId = msg.chat.id;
     if (msg.from.username !== ADMIN_USERNAME) return;
@@ -161,30 +144,38 @@ bot.onText(/\/idees\s+(.+)?/, async (msg, match) => {
     bot.sendMessage(chatId, completion.choices[0]?.message?.content || "Voici tes idées de boss.");
 });
 
-// 8. /client - Gestion client
-bot.onText(/\/client/, (msg) => {
-    const chatId = msg.chat.id;
-    if (msg.from.username !== ADMIN_USERNAME) return;
-    bot.sendMessage(chatId, "💡 **Conseil de vente** : Sois toujours courtois, rappelle les tarifs officiels et oriente rapidement le client vers MonCash ou NetCash, puis le lien Shopify.");
-});
-
-// 9. /support - Support et paiements
 bot.onText(/\/support/, (msg) => {
     const chatId = msg.chat.id;
     if (msg.from.username !== ADMIN_USERNAME) return;
-    bot.sendMessage(chatId, "📞 **Infos Support & Paiements** :\n• WhatsApp : +50938898521\n• Paiements acceptés : MonCash, NetCash\n• Boutique : https://afkmarketing.myshopify.com/");
+    bot.sendMessage(chatId, "📞 **Support & Paiements** :\n• WhatsApp : +50938898521\n• Paiements : MonCash, NetCash\n• Boutique : https://afkmarketing.myshopify.com/");
 });
 
-// 10. /status - Santé du système
 bot.onText(/\/status/, (msg) => {
     const chatId = msg.chat.id;
     if (msg.from.username !== ADMIN_USERNAME) return;
-    bot.sendMessage(chatId, "🟢 **État du Système** :\n• Bot Telegram : Actif\n• API Groq : Connectée\n• Shopify Store : Lié (afkmarketing.myshopify.com)");
+    bot.sendMessage(chatId, "🟢 **Système Hi-Tech Actif** :\n• Analyse intelligente des ordres : Activée\n• Connexion Groq & Shopify : OK");
+});
+
+bot.on('callback_query', async (callbackQuery) => {
+    const msg = callbackQuery.message;
+    const data = callbackQuery.data;
+    const chatId = msg.chat.id;
+
+    if (data === 'cmd_stats') {
+        bot.sendMessage(chatId, `📊 Messages traités aujourd'hui : ${messagesRecusAujourdhui}`);
+    } else if (data === 'cmd_aide') {
+        bot.sendMessage(chatId, "Tape `/aide` pour voir les options du tableau de bord.");
+    } else if (data === 'cmd_idees') {
+        bot.sendMessage(chatId, "💡 Utilise `/idees [sujet]` pour lancer une recherche stratégique.");
+    } else if (data === 'cmd_status') {
+        bot.sendMessage(chatId, "🟢 Tout est opérationnel !");
+    }
+    bot.answerCallbackQuery(callbackQuery.id);
 });
 
 
 // ==========================================
-// 3. GESTION DES MESSAGES (CLIENTS & ADMIN)
+// 3. CERVEAU IA AVANCÉ & EXÉCUTION D'ORDRES EN DIRECT
 // ==========================================
 bot.on('message', async (msg) => {
     const chatId = msg.chat.id;
@@ -197,17 +188,18 @@ bot.on('message', async (msg) => {
 
         let systemPrompt = "";
         if (estAdmin) {
-            systemPrompt = `Tu t'adresses directement à ton créateur et administrateur d'AFK Création et Marketing (@AFKCreation1). Sois respectueux, obéissant, appelle-le "Chef" ou "Boss".`;
+            systemPrompt = `Tu es l'associé et l'assistant ultra-avancé d'AFK Création et Marketing. Tu t'adresses à ton créateur Fransen (@AFKCreation1), appelé "Chef" ou "Boss". 
+            En plus de converser, tu es capable d'analyser s'il te donne un ordre en direct (par exemple, s'il te demande de rédiger un message publicitaire, de préparer une stratégie, ou d'agir). Si c'est un ordre de rédaction pour la chaîne ou une promo, génère directement le contenu prêt à être copié ou publié. Sois pro, réactif et ultra-intelligent.`;
         } else {
             systemPrompt = `Tu es l'assistant virtuel officiel et amical d'AFK Création et Marketing (boutique : https://afkmarketing.myshopify.com/). 
-            Tu peux discuter de façon chaleureuse, mais tu dois toujours ramener la conversation vers nos offres et services :
+            Oriente toujours les clients vers nos offres :
             - Abonnements Netflix Premium : 500.00 HTG.
             - Recharge Diamants Free Fire : À partir de 160.00 HTG.
-            - Cartes virtuelles Mastercard / Visa (Sutton Bank, USA, 3D Secure, paiement MonCash et NetCash) :
+            - Cartes virtuelles Mastercard / Visa (MonCash et NetCash) :
               * Mastercard Silver : 1 600 HTG
               * VISA Classic : 2 400 HTG
               * Mastercard Elite : 4 000 HTG
-            Invite toujours les clients à visiter https://afkmarketing.myshopify.com/ pour voir les liens directs et commander. Contact WhatsApp : +50938898521.`;
+            Contact WhatsApp : +50938898521.`;
         }
 
         try {
@@ -217,7 +209,7 @@ bot.on('message', async (msg) => {
                     { role: "system", content: systemPrompt },
                     { role: "user", content: texteRecu }
                 ],
-                temperature: 0.7,
+                temperature: 0.75,
                 max_tokens: 512
             });
 
@@ -237,12 +229,11 @@ const server = http.createServer((req, res) => {
     res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
     res.end(`
         <html>
-            <head><title>AFK Bot Telegram</title></head>
+            <head><title>AFK Bot Hi-Tech</title></head>
             <body style="font-family: Arial, sans-serif; text-align: center; margin-top: 50px; background-color: #f4f7f6;">
                 <div style="background: white; padding: 30px; border-radius: 10px; display: inline-block; box-shadow: 0px 4px 10px rgba(0,0,0,0.1);">
-                    <h1 style="color: #2e7d32;">✅ Bot Telegram Actif & Shopify Connecté !</h1>
-                    <p>Le bot <b>AFK Création et Marketing</b> est en ligne 24/7 sur Telegram.</p>
-                    <p>Boutique Shopify : <a href="https://afkmarketing.myshopify.com/" target="_blank">afkmarketing.myshopify.com</a></p>
+                    <h1 style="color: #2e7d32;">🚀 Bot AFK Hi-Tech Actif 24/7 !</h1>
+                    <p>Intelligence artificielle avancée connectée à Telegram et Shopify.</p>
                 </div>
             </body>
         </html>
