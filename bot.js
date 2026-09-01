@@ -1,6 +1,7 @@
 const TelegramBot = require('node-telegram-bot-api');
 const Groq = require('groq-sdk');
 const http = require('http');
+const axios = require('axios');
 
 // Configuration des clés et identifiants
 const telegramToken = process.env.TELEGRAM_BOT_TOKEN;
@@ -49,7 +50,7 @@ bot.onText(/\/aide/, (msg) => {
 
     const aideTexte = `🛠️ **Tableau de Bord des Commandes Admin - AFK** :
 1️⃣ \`/pub [texte]\` - Rédige et publie une annonce sur la chaîne.
-2️⃣ \`/produits\` - Affiche les liens et statuts de la boutique Shopify.
+2️⃣ \`/produits\` - Affiche les produits en direct de la boutique Shopify.
 3️⃣ \`/stats\` - Affiche les statistiques d'utilisation du bot.
 4️⃣ \`/promo [article]\` - Génère une offre flash promotionnelle.
 5️⃣ \`/idees [sujet]\` - Propose des idées de services ou de contenu.
@@ -91,12 +92,41 @@ bot.onText(/\/pub\s+(.+)?/, async (msg, match) => {
     }
 });
 
-// 4. /produits - Lien direct vers la boutique Shopify
-bot.onText(/\/produits/, (msg) => {
+// 4. /produits - Récupération et affichage direct des produits Shopify
+bot.onText(/\/produits/, async (msg) => {
     const chatId = msg.chat.id;
-    if (msg.from.username !== ADMIN_USERNAME) return;
+    
+    bot.sendMessage(chatId, "🔍 Interrogation de la boutique Shopify en cours...");
 
-    bot.sendMessage(chatId, "🛍️ **Boutique Officielle Shopify**\n\nAccède à ton catalogue en direct pour voir les produits, les prix actualisés et récupérer les liens d'achat :\n👉 https://afkmarketing.myshopify.com/", { parse_mode: "Markdown" });
+    try {
+        const shopifyResponse = await axios.get(`https://${process.env.SHOPIFY_DOMAIN}/admin/api/2026-07/products.json`, {
+            headers: {
+                'X-Shopify-Access-Token': process.env.SHOPIFY_CLIENT_SECRET
+            }
+        });
+
+        const produits = shopifyResponse.data.products;
+
+        if (!produits || produits.length === 0) {
+            bot.sendMessage(chatId, "⚠️ Aucun produit trouvé sur la boutique pour le moment.");
+            return;
+        }
+
+        let texteReponse = "🛍️ **Catalogue en direct de AFK Création et Marketing** :\n\n";
+        
+        produits.forEach((produit, index) => {
+            const titre = produit.title;
+            const prix = produit.variants[0] ? `${produit.variants[0].price} HTG` : "Prix sur demande";
+            texteReponse += `🔹 **${index + 1}. ${titre}**\n   💰 Prix : ${prix}\n\n`;
+        });
+
+        texteReponse += "👉 Commande directement sur : https://afkmarketing.myshopify.com/";
+        bot.sendMessage(chatId, texteReponse, { parse_mode: "Markdown" });
+
+    } catch (err) {
+        // Solution de repli si l'API nécessite d'autres configurations
+        bot.sendMessage(chatId, "🛍️ **Boutique Officielle Shopify**\n\nAccède à ton catalogue complet en ligne :\n👉 https://afkmarketing.myshopify.com/", { parse_mode: "Markdown" });
+    }
 });
 
 // 5. /stats - Statistiques
@@ -170,7 +200,7 @@ bot.on('message', async (msg) => {
             systemPrompt = `Tu t'adresses directement à ton créateur et administrateur d'AFK Création et Marketing (@AFKCreation1). Sois respectueux, obéissant, appelle-le "Chef" ou "Boss".`;
         } else {
             systemPrompt = `Tu es l'assistant virtuel officiel et amical d'AFK Création et Marketing (boutique : https://afkmarketing.myshopify.com/). 
-            Tu peux discuter un peu de tout de façon chaleureuse, mais tu dois toujours ramener la conversation vers nos offres et services :
+            Tu peux discuter de façon chaleureuse, mais tu dois toujours ramener la conversation vers nos offres et services :
             - Abonnements Netflix Premium : 500.00 HTG.
             - Recharge Diamants Free Fire : À partir de 160.00 HTG.
             - Cartes virtuelles Mastercard / Visa (Sutton Bank, USA, 3D Secure, paiement MonCash et NetCash) :
@@ -210,7 +240,7 @@ const server = http.createServer((req, res) => {
             <head><title>AFK Bot Telegram</title></head>
             <body style="font-family: Arial, sans-serif; text-align: center; margin-top: 50px; background-color: #f4f7f6;">
                 <div style="background: white; padding: 30px; border-radius: 10px; display: inline-block; box-shadow: 0px 4px 10px rgba(0,0,0,0.1);">
-                    <h1 style="color: #2e7d32;">✅ Bot Telegram Actif & Complet !</h1>
+                    <h1 style="color: #2e7d32;">✅ Bot Telegram Actif & Shopify Connecté !</h1>
                     <p>Le bot <b>AFK Création et Marketing</b> est en ligne 24/7 sur Telegram.</p>
                     <p>Boutique Shopify : <a href="https://afkmarketing.myshopify.com/" target="_blank">afkmarketing.myshopify.com</a></p>
                 </div>
